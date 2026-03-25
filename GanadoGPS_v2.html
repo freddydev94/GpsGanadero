@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>GanadoGPS</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --pasto:#3D6B35;--neon:#7ED56F;--alerta:#FF4D1C;
+  --oro:#D4A017;--panel:#0D1C0B;--panel2:#142012;
+  --borde:#1E3A1A;--txt:#E8F5E1;--dim:#5A8050;--azul:#4A90D9;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'Syne',sans-serif;background:#111;color:var(--txt);user-select:none}
+#cv{position:fixed;top:0;left:0;width:100%;height:100%}
+
+/* TOPBAR */
+#tb{position:fixed;top:0;left:0;right:0;height:52px;background:rgba(13,28,11,0.93);backdrop-filter:blur(10px);border-bottom:1px solid var(--borde);display:flex;align-items:center;padding:0 12px;gap:8px;z-index:200}
+.logo{width:32px;height:32px;background:var(--pasto);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+#tb h1{font-size:1.05rem;font-weight:800;color:var(--neon);flex:1}
+.pill{display:flex;align-items:center;gap:4px;background:var(--panel2);border:1px solid var(--borde);border-radius:20px;padding:3px 9px;font-size:0.6rem;font-family:'Space Mono',monospace;white-space:nowrap}
+.dl{width:6px;height:6px;border-radius:50%;background:var(--neon);animation:bl 1.5s infinite}
+.dr{width:6px;height:6px;border-radius:50%;background:var(--alerta);animation:bl 0.8s infinite}
+@keyframes bl{0%,100%{opacity:1}50%{opacity:0.2}}
+
+/* PANEL */
+#bp{position:fixed;left:0;right:0;bottom:0;background:rgba(13,28,11,0.97);backdrop-filter:blur(14px);border-top:1px solid var(--borde);border-radius:18px 18px 0 0;z-index:200;transform:translateY(0);transition:transform 0.3s cubic-bezier(0.4,0,0.2,1)}
+#hdl{width:100%;padding:12px 0 6px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:grab;touch-action:none}
+#hdl-bar{width:44px;height:5px;background:var(--dim);border-radius:3px;transition:background 0.2s}
+#hdl:active #hdl-bar{background:var(--neon)}
+#hdl-hint{font-size:0.52rem;color:var(--dim);font-family:'Space Mono',monospace;letter-spacing:1px}
+
+/* TABS */
+.tabs{display:flex;gap:6px;padding:0 14px 10px}
+.tab{flex:1;padding:7px 4px;background:var(--panel2);border:1px solid var(--borde);border-radius:9px;color:var(--dim);font-family:'Syne',sans-serif;font-size:0.68rem;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;transition:all 0.18s}
+.tab .ti{font-size:0.95rem}
+.tab.on{background:var(--pasto);border-color:var(--neon);color:#fff;box-shadow:0 0 12px rgba(126,213,111,0.2)}
+.tc{display:none;padding:0 14px 28px}
+.tc.on{display:block}
+
+/* CAJA STATUS */
+.sbox{background:var(--panel2);border:1px solid var(--borde);border-radius:11px;padding:10px 13px;margin-bottom:10px;display:flex;align-items:center;gap:10px}
+.sbox .si{font-size:1.3rem}
+.sbox-info{flex:1}
+.sbox .st{font-size:0.82rem;font-weight:700}
+.sbox .ss{font-size:0.62rem;color:var(--dim);font-family:'Space Mono',monospace;margin-top:2px}
+
+/* SEGMENTO ACTIVO */
+#activeSeg{background:rgba(74,144,217,0.12);border:1px solid var(--azul);border-radius:11px;padding:11px 13px;margin-bottom:10px;display:none}
+#activeSeg .seg-label{font-size:0.72rem;color:var(--azul);font-family:'Space Mono',monospace;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.seg-dist-big{font-size:1.6rem;font-weight:800;font-family:'Space Mono',monospace;color:var(--txt);line-height:1}
+.seg-dist-unit{font-size:0.7rem;color:var(--dim);margin-top:2px;font-family:'Space Mono',monospace}
+.seg-pts{font-size:0.6rem;color:var(--dim);font-family:'Space Mono',monospace;margin-top:4px}
+
+/* MODO EDICIÓN badge */
+#editBadge{background:rgba(212,160,23,0.14);border:1px solid var(--oro);border-radius:10px;padding:7px 12px;margin-bottom:10px;font-size:0.68rem;color:var(--oro);font-family:'Space Mono',monospace;text-align:center;display:none;line-height:1.5}
+
+/* BOTONES */
+.bmain{width:100%;padding:13px;border-radius:13px;border:none;font-family:'Syne',sans-serif;font-size:0.92rem;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all 0.18s;margin-bottom:7px}
+.bgreen{background:var(--neon);color:#0D1C0B;box-shadow:0 3px 16px rgba(126,213,111,0.3)}
+.bgreen:active{transform:scale(0.97)}
+.bred{background:var(--alerta);color:#fff;animation:pb 2s infinite}
+@keyframes pb{0%,100%{box-shadow:0 3px 16px rgba(255,77,28,0.3)}50%{box-shadow:0 3px 24px rgba(255,77,28,0.6)}}
+.bred:active{transform:scale(0.97)}
+.boro{background:rgba(212,160,23,0.15);color:var(--oro);border:1px solid rgba(212,160,23,0.4);box-shadow:none}
+.boro:active{transform:scale(0.97)}
+.brow{display:flex;gap:7px;margin-top:4px}
+.bsec{flex:1;padding:9px;background:var(--panel2);border:1px solid var(--borde);border-radius:9px;color:var(--txt);font-family:'Syne',sans-serif;font-size:0.73rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;transition:all 0.18s}
+.bsec:active{background:var(--borde)}
+.bsec.red{color:var(--alerta);border-color:rgba(255,77,28,0.3)}
+.bsec.oro{color:var(--oro);border-color:rgba(212,160,23,0.3)}
+.bsec.azul{color:var(--azul);border-color:rgba(74,144,217,0.3)}
+
+/* TOTALES */
+.total-stats{display:flex;gap:6px;margin-top:8px}
+.st1{flex:1;background:var(--panel2);border:1px solid var(--borde);border-radius:9px;padding:7px;text-align:center}
+.sv{font-size:1rem;font-weight:800;font-family:'Space Mono',monospace;color:var(--neon)}
+.sk{font-size:0.5rem;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-top:1px}
+
+/* LISTA SEGMENTOS */
+#segList{display:flex;flex-direction:column;gap:6px;margin-top:8px;max-height:150px;overflow-y:auto}
+#segList::-webkit-scrollbar{width:3px}
+#segList::-webkit-scrollbar-thumb{background:var(--borde)}
+.seg-item{background:var(--panel2);border:1px solid var(--borde);border-radius:9px;padding:8px 11px;display:flex;align-items:center;gap:9px}
+.seg-letter{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.78rem;flex-shrink:0}
+.seg-info{flex:1}
+.seg-name{font-size:0.78rem;font-weight:700}
+.seg-meta{font-size:0.59rem;font-family:'Space Mono',monospace;color:var(--dim);margin-top:1px}
+.seg-btns{display:flex;gap:4px}
+.seg-btn{background:none;border:1px solid var(--borde);border-radius:6px;color:var(--dim);font-size:0.75rem;cursor:pointer;padding:4px 7px;transition:all 0.15s}
+.seg-btn:hover{border-color:var(--neon);color:var(--neon)}
+.seg-btn.del:hover{border-color:var(--alerta);color:var(--alerta)}
+
+/* POPUP PUNTO SELECCIONADO */
+#ptPopup{position:fixed;z-index:300;background:rgba(13,28,11,0.97);border:1px solid var(--borde);border-radius:12px;padding:10px 14px;min-width:160px;display:none;backdrop-filter:blur(10px);box-shadow:0 6px 24px rgba(0,0,0,0.5)}
+#ptPopup .pp-title{font-size:0.72rem;font-weight:700;color:var(--dim);font-family:'Space Mono',monospace;margin-bottom:8px}
+.pp-btn{width:100%;padding:8px;border-radius:8px;border:none;font-family:'Syne',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:7px;margin-bottom:5px;transition:all 0.15s}
+.pp-btn:last-child{margin-bottom:0}
+.pp-btn.move{background:rgba(212,160,23,0.15);color:var(--oro)}
+.pp-btn.move:active{background:rgba(212,160,23,0.3)}
+.pp-btn.del{background:rgba(255,77,28,0.12);color:var(--alerta)}
+.pp-btn.del:active{background:rgba(255,77,28,0.25)}
+.pp-btn.cancel{background:var(--panel2);color:var(--dim)}
+
+/* GPS BADGE */
+#gps{position:fixed;top:62px;left:50%;transform:translateX(-50%);background:rgba(13,28,11,0.93);border:1px solid var(--borde);border-radius:20px;padding:4px 13px;font-size:0.62rem;font-family:'Space Mono',monospace;color:var(--dim);z-index:190;display:none;white-space:nowrap;backdrop-filter:blur(8px)}
+#gps span{color:var(--neon)}
+
+/* ALERT POPUP */
+#apop{position:fixed;top:62px;left:12px;right:12px;background:var(--alerta);border-radius:13px;padding:13px 15px;z-index:400;display:none;box-shadow:0 6px 28px rgba(255,77,28,0.45);animation:pi 0.28s ease}
+@keyframes pi{from{transform:translateY(-16px);opacity:0}to{transform:translateY(0);opacity:1}}
+.apt{font-size:0.88rem;font-weight:800;display:flex;align-items:center;gap:7px}
+.apb{font-size:0.72rem;margin-top:5px;opacity:0.9;font-family:'Space Mono',monospace}
+.apc{position:absolute;top:9px;right:11px;background:none;border:none;color:#fff;font-size:1rem;cursor:pointer}
+
+/* CONTROLES MAPA */
+#zmb{position:fixed;right:12px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:6px;z-index:190}
+.zb{width:38px;height:38px;background:rgba(13,28,11,0.9);border:1px solid var(--borde);border-radius:9px;color:var(--txt);font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px)}
+#mlb{position:fixed;right:12px;bottom:8px;z-index:190;background:rgba(13,28,11,0.9);border:1px solid var(--borde);border-radius:9px;color:var(--neon);font-size:1.1rem;width:38px;height:38px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px)}
+
+/* ANIMALES */
+.alist{display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto}
+.alist::-webkit-scrollbar{width:3px}
+.arow{background:var(--panel2);border:1px solid var(--borde);border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:9px}
+.arow.out{border-color:rgba(255,77,28,0.4);background:rgba(255,77,28,0.06)}
+.adot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.adot.out{animation:bl 0.8s infinite}
+.ainfo{flex:1}
+.aname{font-size:0.82rem;font-weight:700}
+.acoord{font-size:0.6rem;font-family:'Space Mono',monospace;color:var(--dim);margin-top:2px}
+.acoord.out{color:var(--alerta)}
+.aclr{width:11px;height:11px;border-radius:3px}
+
+/* ALERTAS */
+.allist{display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto}
+.alrow{border-radius:9px;padding:9px 11px}
+.alrow.w{background:rgba(255,77,28,0.08);border:1px solid rgba(255,77,28,0.25)}
+.alrow.ok{background:rgba(61,107,53,0.1);border:1px solid rgba(126,213,111,0.2)}
+.alt{font-size:0.76rem;font-weight:600}
+.alt.w{color:#FF8B6A}.alt.ok{color:var(--neon)}
+.altime{font-size:0.58rem;font-family:'Space Mono',monospace;color:var(--dim);margin-top:2px}
+
+.empty{text-align:center;color:var(--dim);font-size:0.7rem;font-family:'Space Mono',monospace;padding:14px 0}
+.c0{background:#7ED56F22;color:#7ED56F}.c1{background:#4A90D922;color:#4A90D9}.c2{background:#D4A01722;color:#D4A017}.c3{background:#CE93D822;color:#CE93D8}.c4{background:#E5737322;color:#E57373}.c5{background:#8BC34A22;color:#8BC34A}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<!-- TOPBAR -->
+<header id="tb">
+  <div class="logo">🐄</div>
+  <h1>GanadoGPS</h1>
+  <div class="pill" id="mpill"><div class="dl"></div>LISTO</div>
+  <div class="pill" id="opill" style="display:none"><span id="ocnt" style="color:var(--alerta)">0</span>&nbsp;fuera</div>
+</header>
+
+<!-- GPS BADGE -->
+<div id="gps">📍 <span id="gacc">buscando...</span></div>
+
+<!-- POPUP PUNTO -->
+<div id="ptPopup">
+  <div class="pp-title" id="ppTitle">Punto seleccionado</div>
+  <button class="pp-btn move" onclick="startMovePt()">✋ Mover punto</button>
+  <button class="pp-btn del"  onclick="deletePt()">🗑 Borrar punto</button>
+  <button class="pp-btn cancel" onclick="closePtPopup()">✕ Cancelar</button>
+</div>
+
+<!-- ALERT POPUP -->
+<div id="apop">
+  <button class="apc" onclick="closeAlert()">✕</button>
+  <div class="apt">🚨 ¡ANIMAL FUERA!</div>
+  <div class="apb" id="apbody">—</div>
+</div>
+
+<!-- ZOOM -->
+<div id="zmb">
+  <button class="zb" onclick="doZoom(1.2)">+</button>
+  <button class="zb" onclick="doZoom(0.83)">−</button>
+</div>
+<button id="mlb" onclick="centerMe()">📍</button>
+
+<!-- PANEL -->
+<div id="bp">
+  <div id="hdl"><div id="hdl-bar"></div><div id="hdl-hint">DESLIZA ↑↓</div></div>
+
+  <div class="tabs">
+    <div class="tab on"  id="tTrazar"  onclick="goTab('trazar')"><span class="ti">✏️</span>Trazado</div>
+    <div class="tab"     id="tRastreo" onclick="goTab('rastreo')"><span class="ti">📡</span>Rastreo</div>
+    <div class="tab"     id="tAlertas" onclick="goTab('alertas')"><span class="ti">🔔</span>Alertas</div>
+  </div>
+
+  <!-- TAB TRAZADO -->
+  <div class="tc on" id="cTrazar">
+
+    <div class="sbox">
+      <div class="si" id="sboxIcon">🗺️</div>
+      <div class="sbox-info">
+        <div class="st" id="sboxTitle">Sin trazados</div>
+        <div class="ss" id="sboxSub">Inicia un nuevo segmento para comenzar</div>
+      </div>
+    </div>
+
+    <!-- Estado del segmento activo -->
+    <div id="activeSeg">
+      <div class="seg-label"><div class="dr"></div><span id="activeLabel">TRAZANDO A → B</span></div>
+      <div class="seg-dist-big" id="activeDistNum">0</div>
+      <div class="seg-dist-unit" id="activeDistUnit">metros recorridos</div>
+      <div class="seg-pts" id="activePts">0 puntos capturados</div>
+    </div>
+
+    <!-- Badge modo edición -->
+    <div id="editBadge">
+      ✏️ <b>MODO EDICIÓN</b><br>
+      Toca un punto del mapa para moverlo o borrarlo
+    </div>
+
+    <!-- BOTÓN PRINCIPAL -->
+    <button class="bmain bgreen" id="btnPrincipal" onclick="accionPrincipal()">
+      📍 INICIAR NUEVO SEGMENTO
+    </button>
+
+    <!-- BOTÓN FINALIZAR (durante trazado) -->
+    <button class="bmain bred" id="btnFinalizar" onclick="finalizarSegmento()" style="display:none">
+      ⏹ FINALIZAR SEGMENTO
+    </button>
+
+    <!-- FILA: Deshacer + Editar + Cerrar -->
+    <div class="brow" id="rowAcciones">
+      <button class="bsec" id="btnUndo" onclick="undoLastPt()" style="display:none">↩ Deshacer</button>
+      <button class="bsec azul" id="btnEdit" onclick="toggleEdit()" style="display:none">✏️ Editar</button>
+      <button class="bsec oro"  id="btnCerrar" onclick="cerrarPerimetro()" style="display:none">🔒 Cerrar</button>
+    </div>
+    <div class="brow">
+      <button class="bsec" onclick="loadDemo()">🌾 Demo</button>
+      <button class="bsec red" onclick="clearAll()">🗑 Limpiar todo</button>
+    </div>
+
+    <!-- Totales -->
+    <div class="total-stats">
+      <div class="st1"><div class="sv" id="tSegs">0</div><div class="sk">Segmentos</div></div>
+      <div class="st1"><div class="sv" id="tDist">0m</div><div class="sk">Total</div></div>
+      <div class="st1"><div class="sv" id="tArea">—</div><div class="sk">Área</div></div>
+    </div>
+
+    <div id="segList"></div>
+  </div>
+
+  <!-- TAB RASTREO -->
+  <div class="tc" id="cRastreo">
+    <div class="alist" id="alist"></div>
+  </div>
+
+  <!-- TAB ALERTAS -->
+  <div class="tc" id="cAlertas">
+    <div class="allist" id="allist"><div class="empty">Sin alertas recientes</div></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// CANVAS
+// ═══════════════════════════════════════════════════════
+const cv  = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+function resize(){ cv.width=window.innerWidth; cv.height=window.innerHeight; draw(); }
+window.addEventListener('resize', resize);
+
+// ═══════════════════════════════════════════════════════
+// ESTADO
+// ═══════════════════════════════════════════════════════
+const S = {
+  zoom:1, ox:0, oy:0,
+  myLat:null, myLon:null,
+  centerLat:9.7489, centerLon:83.7534,
+  MPU:2,
+  segments:[],          // segmentos guardados
+  activePts:[],         // puntos del segmento en curso
+  activeSegId:null,
+  activeGpsId:null,
+  activeMode:null,      // 'gps'|'manual'
+  activeSegDist:0,
+  lastGpsPt:null,
+  polygon:null,
+  editMode:false,       // modo edición de puntos
+  movingPt:null,        // {segIdx, ptIdx} punto siendo arrastrado
+  selectedPt:null,      // {segIdx, ptIdx} punto seleccionado para popup
+  animals:[], tick:0,
+  mapDrag:false, mapDragLast:null, mapMoved:0,
+};
+
+const SEG_COLORS=['#7ED56F','#4A90D9','#D4A017','#CE93D8','#E57373','#8BC34A'];
+const LETTERS='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+// ═══════════════════════════════════════════════════════
+// COORDS
+// ═══════════════════════════════════════════════════════
+function g2v(lat,lon){
+  return {x:(lon-S.centerLon)*111000*Math.cos(S.centerLat*Math.PI/180)/S.MPU, y:-(lat-S.centerLat)*111000/S.MPU};
+}
+function v2c(vx,vy){ return {x:cv.width/2+vx*S.zoom+S.ox, y:cv.height/2+vy*S.zoom+S.oy}; }
+function c2v(cx,cy){ return {x:(cx-cv.width/2-S.ox)/S.zoom, y:(cy-cv.height/2-S.oy)/S.zoom}; }
+function v2geo(vx,vy){ return {lat:S.centerLat-vy*S.MPU/111000, lon:S.centerLon+vx*S.MPU/(111000*Math.cos(S.centerLat*Math.PI/180))}; }
+function pd2(a,b){ return Math.hypot(a.x-b.x,a.y-b.y)*S.MPU; }
+function fmtD(m){ if(m>=1000) return (m/1000).toFixed(2)+'km'; if(m>=1) return Math.round(m)+'m'; return Math.round(m*100)+'cm'; }
+
+// ═══════════════════════════════════════════════════════
+// DIBUJO
+// ═══════════════════════════════════════════════════════
+function draw(){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  drawBg();
+  if(S.polygon&&S.polygon.length>=3) drawPolygon();
+  S.segments.forEach((seg,si)=>drawSegment(seg,si));
+  if(S.activePts.length>0) drawActiveSeg();
+  S.animals.forEach(a=>{ drawTrail(a); drawAnimal(a); });
+  if(S.myLat) drawMe();
+}
+
+function drawBg(){
+  const g=ctx.createLinearGradient(0,0,0,cv.height);
+  g.addColorStop(0,'#1B3018'); g.addColorStop(1,'#111D10');
+  ctx.fillStyle=g; ctx.fillRect(0,0,cv.width,cv.height);
+  ctx.strokeStyle='rgba(40,80,35,0.16)'; ctx.lineWidth=1;
+  const gs=60*S.zoom, ox=((S.ox%gs)+gs)%gs, oy=((S.oy%gs)+gs)%gs;
+  for(let x=ox-gs;x<cv.width+gs;x+=gs){ ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,cv.height);ctx.stroke(); }
+  for(let y=oy-gs;y<cv.height+gs;y+=gs){ ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(cv.width,y);ctx.stroke(); }
+}
+
+function drawPolygon(){
+  const pts=S.polygon.map(p=>v2c(p.x,p.y));
+  ctx.beginPath(); pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y)); ctx.closePath();
+  ctx.fillStyle='rgba(126,213,111,0.07)'; ctx.fill();
+}
+
+function drawSegment(seg, si){
+  if(seg.pts.length<2) return;
+  const pts=seg.pts.map(p=>v2c(p.x,p.y));
+  const col=seg.color;
+  // Línea
+  ctx.beginPath(); pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
+  ctx.strokeStyle=col; ctx.lineWidth=2.5; ctx.setLineDash([]); ctx.stroke();
+  // Distancia en el centro
+  const mid=pts[Math.floor(pts.length/2)];
+  const label=fmtD(seg.dist);
+  ctx.font='bold 11px Space Mono'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  const tw=ctx.measureText(label).width;
+  ctx.fillStyle='rgba(13,28,11,0.8)';
+  ctx.beginPath(); ctx.roundRect(mid.x-tw/2-5,mid.y-9,tw+10,18,4); ctx.fill();
+  ctx.fillStyle=col; ctx.fillText(label,mid.x,mid.y);
+  // Puntos — si modo edición mostrar todos, si no solo inicio/fin
+  if(S.editMode){
+    seg.pts.forEach((p,pi)=>{
+      const c=v2c(p.x,p.y);
+      const isSel=S.selectedPt&&S.selectedPt.si===si&&S.selectedPt.pi===pi;
+      const r=isSel?10:7;
+      ctx.beginPath(); ctx.arc(c.x,c.y,r,0,Math.PI*2);
+      ctx.fillStyle=isSel?'#fff':col; ctx.fill();
+      ctx.strokeStyle=isSel?col:'#0D1C0B'; ctx.lineWidth=2; ctx.stroke();
+      // Número del punto
+      ctx.font='bold 8px Syne'; ctx.fillStyle=isSel?col:'#0D1C0B';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(pi+1,c.x,c.y);
+    });
+  } else {
+    // Solo punto A y punto B con letra
+    drawPtLabel(pts[0].x,pts[0].y,seg.labelA,col);
+    drawPtLabel(pts[pts.length-1].x,pts[pts.length-1].y,seg.labelB,col);
+  }
+}
+
+function drawPtLabel(x,y,letter,col){
+  ctx.beginPath(); ctx.arc(x,y,10,0,Math.PI*2); ctx.fillStyle=col+'33'; ctx.fill();
+  ctx.beginPath(); ctx.arc(x,y,6,0,Math.PI*2); ctx.fillStyle=col; ctx.fill();
+  ctx.strokeStyle='#0D1C0B'; ctx.lineWidth=2; ctx.stroke();
+  ctx.font='bold 8px Syne'; ctx.fillStyle='#0D1C0B'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(letter,x,y);
+  ctx.font='bold 10px Syne'; ctx.fillStyle='#E8F5E1'; ctx.textBaseline='bottom';
+  ctx.fillText(letter,x,y-8);
+}
+
+function drawActiveSeg(){
+  const col=SEG_COLORS[S.segments.length%SEG_COLORS.length];
+  const pts=S.activePts.map(p=>v2c(p.x,p.y));
+  if(pts.length<1) return;
+  if(pts.length>1){
+    ctx.beginPath(); pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
+    ctx.strokeStyle=col; ctx.lineWidth=2.5;
+    const off=(S.tick*0.5)%16; ctx.setLineDash([10,6]); ctx.lineDashOffset=-off;
+    ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset=0;
+  }
+  // Inicio
+  const startL=LETTERS[S.segments.length];
+  drawPtLabel(pts[0].x,pts[0].y,startL,col);
+  // Último punto activo pulsante
+  if(pts.length>1){
+    const last=pts[pts.length-1];
+    const r=7+Math.sin(S.tick*0.12)*2;
+    ctx.beginPath(); ctx.arc(last.x,last.y,r,0,Math.PI*2);
+    ctx.strokeStyle=col+'99'; ctx.lineWidth=2; ctx.stroke();
+    ctx.beginPath(); ctx.arc(last.x,last.y,4,0,Math.PI*2);
+    ctx.fillStyle=col; ctx.fill();
+  }
+}
+
+function drawTrail(a){
+  if(a.trail.length<2) return;
+  ctx.beginPath();
+  a.trail.forEach((p,i)=>{ const c=v2c(p.x,p.y); i?ctx.lineTo(c.x,c.y):ctx.moveTo(c.x,c.y); });
+  ctx.strokeStyle=a.inside?`${a.color}50`:'rgba(255,77,28,0.3)'; ctx.lineWidth=1.5; ctx.stroke();
+}
+
+function drawAnimal(a){
+  const pos=v2c(a.x,a.y); const r=9;
+  if(!a.inside){ ctx.beginPath(); ctx.arc(pos.x,pos.y,r+6+Math.sin(S.tick*0.08)*3,0,Math.PI*2); ctx.strokeStyle='rgba(255,77,28,0.4)'; ctx.lineWidth=2; ctx.stroke(); }
+  ctx.beginPath(); ctx.arc(pos.x,pos.y,r,0,Math.PI*2); ctx.fillStyle=a.inside?a.color:'#FF4D1C'; ctx.fill();
+  ctx.strokeStyle='#111'; ctx.lineWidth=2; ctx.stroke();
+  ctx.font=`${r*1.3}px serif`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('🐄',pos.x,pos.y-0.5);
+  ctx.font='bold 9px Syne'; ctx.fillStyle='#E8F5E1'; ctx.textBaseline='top'; ctx.fillText(a.name,pos.x,pos.y+r+3);
+  if(!a.inside){ ctx.font='bold 8px Space Mono'; ctx.fillStyle='#FF4D1C'; ctx.fillText('⚠ FUERA',pos.x,pos.y+r+15); }
+}
+
+function drawMe(){
+  const vp=g2v(S.myLat,S.myLon); const pos=v2c(vp.x,vp.y);
+  ctx.beginPath(); ctx.arc(pos.x,pos.y,14+Math.sin(S.tick*0.06)*3,0,Math.PI*2); ctx.fillStyle='rgba(126,213,111,0.1)'; ctx.fill();
+  ctx.beginPath(); ctx.arc(pos.x,pos.y,9,0,Math.PI*2); ctx.fillStyle='#7ED56F'; ctx.fill();
+  ctx.strokeStyle='white'; ctx.lineWidth=2.5; ctx.stroke();
+  ctx.font='bold 8px Syne'; ctx.fillStyle='white'; ctx.textAlign='center'; ctx.textBaseline='top'; ctx.fillText('TÚ',pos.x,pos.y+11);
+}
+
+// ═══════════════════════════════════════════════════════
+// TRAZADO POR SEGMENTOS
+// ═══════════════════════════════════════════════════════
+function accionPrincipal(){ if(!S.activeSegId) iniciarSegmento(); }
+
+function iniciarSegmento(){
+  const la=LETTERS[S.segments.length], lb=LETTERS[S.segments.length+1];
+  S.activeSegId='s'+Date.now(); S.activePts=[]; S.activeSegDist=0; S.lastGpsPt=null;
+  // UI
+  show('activeSeg'); hide('editBadge');
+  S.editMode=false; S.selectedPt=null;
+  document.getElementById('activeLabel').textContent=`TRAZANDO ${la} → ${lb}`;
+  document.getElementById('activeDistNum').textContent='0';
+  document.getElementById('activeDistUnit').textContent='metros recorridos';
+  document.getElementById('activePts').textContent='0 puntos capturados';
+  hide('btnPrincipal'); show('btnFinalizar'); show('btnUndo');
+  hide('btnEdit'); hide('btnCerrar');
+  document.getElementById('mpill').innerHTML='<div class="dr"></div>TRAZANDO';
+  show('gps');
+  document.getElementById('sboxTitle').textContent=`Segmento ${la} → ${lb}`;
+  document.getElementById('sboxIcon').textContent='🔴';
+
+  if(location.protocol==='https:'){
+    S.activeMode='gps';
+    document.getElementById('gacc').textContent='Obteniendo señal GPS...';
+    document.getElementById('sboxSub').textContent='Camina hacia '+lb+' — se traza solo';
+    S.activeGpsId=navigator.geolocation.watchPosition(onGps,onGpsErr,{enableHighAccuracy:true,maximumAge:0,timeout:15000});
+  } else {
+    S.activeMode='manual';
+    document.getElementById('gacc').innerHTML='📵 local · <span>toca el mapa para trazar</span>';
+    document.getElementById('sboxSub').textContent='Toca el mapa para ir poniendo puntos del recorrido';
+  }
+  updateSegStats();
+}
+
+function finalizarSegmento(){
+  if(S.activePts.length<2){ document.getElementById('sboxSub').textContent='⚠ Necesitas al menos 2 puntos para guardar'; return; }
+  if(S.activeGpsId!==null){ navigator.geolocation.clearWatch(S.activeGpsId); S.activeGpsId=null; }
+  const la=LETTERS[S.segments.length], lb=LETTERS[S.segments.length+1];
+  const col=SEG_COLORS[S.segments.length%SEG_COLORS.length];
+  let dist=0; for(let i=1;i<S.activePts.length;i++) dist+=pd2(S.activePts[i-1],S.activePts[i]);
+  S.segments.push({id:S.activeSegId,labelA:la,labelB:lb,pts:[...S.activePts],color:col,dist});
+  S.activeSegId=null; S.activePts=[]; S.activeSegDist=0; S.activeMode=null; S.lastGpsPt=null;
+  // UI
+  hide('activeSeg'); hide('btnFinalizar'); hide('btnUndo');
+  show('btnPrincipal');
+  document.getElementById('btnPrincipal').innerHTML=`📍 INICIAR SEGMENTO ${lb} → ${LETTERS[S.segments.length+1]}`;
+  show('btnEdit');
+  if(S.segments.length>=3) show('btnCerrar');
+  hide('gps');
+  document.getElementById('mpill').innerHTML='<div class="dl"></div>GUARDADO';
+  document.getElementById('sboxTitle').textContent=`✅ Segmento ${la}→${lb} guardado`;
+  document.getElementById('sboxSub').textContent=`${fmtD(dist)} · toca "Editar" para ajustar puntos`;
+  document.getElementById('sboxIcon').textContent='✅';
+  renderSegList(); updateSegStats(); draw();
+}
+
+// GPS
+function onGps(pos){
+  const lat=pos.coords.latitude, lon=pos.coords.longitude, acc=Math.round(pos.coords.accuracy);
+  document.getElementById('gacc').innerHTML=`<span>${lat.toFixed(5)}°N ${lon.toFixed(5)}°O</span> ±${acc}m`;
+  if(!S.myLat){ S.centerLat=lat; S.centerLon=lon; S.ox=0; S.oy=0; }
+  S.myLat=lat; S.myLon=lon;
+  if(!S.activeSegId||S.activeMode!=='gps') return;
+  const vp=g2v(lat,lon);
+  if(S.lastGpsPt){ const d=pd2(vp,S.lastGpsPt); if(d<3) return; S.activeSegDist+=d; }
+  S.lastGpsPt=vp; S.activePts.push(vp);
+  updateActiveUI(); draw();
+}
+function onGpsErr(){
+  S.activeMode='manual';
+  document.getElementById('gacc').innerHTML='⚠ GPS no disp. · <span>toca el mapa</span>';
+  document.getElementById('sboxSub').textContent='Toca el mapa para agregar puntos';
+}
+
+// Punto manual (tap)
+function addManualPt(cx,cy){
+  if(!S.activeSegId||S.activeMode!=='manual') return;
+  const vp=c2v(cx,cy);
+  if(S.activePts.length>0) S.activeSegDist+=pd2(vp,S.activePts[S.activePts.length-1]);
+  S.activePts.push(vp); S.lastGpsPt=vp;
+  updateActiveUI(); draw();
+}
+
+// ─── DESHACER último punto ───
+function undoLastPt(){
+  if(S.activePts.length===0) return;
+  if(S.activePts.length>1){
+    S.activeSegDist-=pd2(S.activePts[S.activePts.length-1],S.activePts[S.activePts.length-2]);
+    S.activeSegDist=Math.max(0,S.activeSegDist);
+  } else { S.activeSegDist=0; }
+  S.activePts.pop(); S.lastGpsPt=S.activePts.length>0?S.activePts[S.activePts.length-1]:null;
+  updateActiveUI(); draw();
+}
+
+function updateActiveUI(){
+  const n=S.activePts.length, d=S.activeSegDist;
+  const big=d>=1000?(d/1000).toFixed(3):d>=1?d.toFixed(1):Math.round(d*100)+'';
+  document.getElementById('activeDistNum').textContent=big;
+  document.getElementById('activeDistUnit').textContent=d>=1000?'kilómetros':d>=1?'metros':'centímetros';
+  document.getElementById('activePts').textContent=`${n} punto${n!==1?'s':''} capturado${n!==1?'s':''}`;
+}
+
+// ═══════════════════════════════════════════════════════
+// MODO EDICIÓN DE PUNTOS
+// ═══════════════════════════════════════════════════════
+function toggleEdit(){
+  S.editMode=!S.editMode;
+  S.selectedPt=null; S.movingPt=null; closePtPopup();
+  const btn=document.getElementById('btnEdit');
+  if(S.editMode){
+    show('editBadge'); btn.textContent='✅ Salir edición'; btn.classList.add('oro');
+    document.getElementById('sboxSub').textContent='Toca un punto para moverlo o borrarlo';
+  } else {
+    hide('editBadge'); btn.textContent='✏️ Editar'; btn.classList.remove('oro');
+    document.getElementById('sboxSub').textContent='Segmentos guardados';
+    rebuildPolygon();
+  }
+  draw();
+}
+
+// Buscar punto más cercano en todos los segmentos guardados
+function findNearestPt(cx,cy){
+  let best=null, bestD=Infinity;
+  S.segments.forEach((seg,si)=>{
+    seg.pts.forEach((p,pi)=>{
+      const c=v2c(p.x,p.y);
+      const d=Math.hypot(cx-c.x,cy-c.y);
+      if(d<bestD){ bestD=d; best={si,pi}; }
+    });
+  });
+  return bestD<26?best:null;
+}
+
+// Mostrar popup de punto
+function showPtPopup(si,pi,cx,cy){
+  S.selectedPt={si,pi};
+  const popup=document.getElementById('ptPopup');
+  document.getElementById('ppTitle').textContent=`Punto ${pi+1} · Segmento ${S.segments[si].labelA}→${S.segments[si].labelB}`;
+  // Posicionar popup cerca del punto pero dentro de la pantalla
+  const px=Math.min(cx, cv.width-180), py=Math.max(cy-140, 70);
+  popup.style.left=px+'px'; popup.style.top=py+'px';
+  popup.style.display='block';
+  draw();
+}
+
+function closePtPopup(){
+  document.getElementById('ptPopup').style.display='none';
+  S.selectedPt=null; draw();
+}
+
+function startMovePt(){
+  // Activar arrastre — el siguiente touchmove/mousemove moverá este punto
+  S.movingPt={...S.selectedPt};
+  closePtPopup();
+  document.getElementById('editBadge').textContent='✋ Arrastra el punto a su nueva posición';
+}
+
+function deletePt(){
+  if(!S.selectedPt) return;
+  const {si,pi}=S.selectedPt;
+  const seg=S.segments[si];
+  if(seg.pts.length<=2){
+    // Solo 2 puntos — preguntar si borrar el segmento entero
+    closePtPopup();
+    if(confirm(`El segmento ${seg.labelA}→${seg.labelB} solo tiene 2 puntos. ¿Borrar el segmento completo?`)){
+      deleteSeg(seg.id);
+    }
+    return;
+  }
+  seg.pts.splice(pi,1);
+  // Recalcular distancia
+  seg.dist=0; for(let i=1;i<seg.pts.length;i++) seg.dist+=pd2(seg.pts[i-1],seg.pts[i]);
+  closePtPopup(); rebuildPolygon(); renderSegList(); updateSegStats(); draw();
+}
+
+function rebuildPolygon(){
+  if(S.segments.length>=3){
+    // Verificar que los segmentos estén conectados para cerrar el polígono
+    const last=S.segments[S.segments.length-1];
+    if(last.labelB===LETTERS[0]) S.polygon=S.segments.flatMap(s=>s.pts);
+    else S.polygon=null;
+  } else { S.polygon=null; }
+}
+
+// ═══════════════════════════════════════════════════════
+// CERRAR PERÍMETRO
+// ═══════════════════════════════════════════════════════
+function cerrarPerimetro(){
+  if(S.segments.length<3) return;
+  const ptIni=S.segments[0].pts[0];
+  const ptFin=S.segments[S.segments.length-1].pts[S.segments[S.segments.length-1].pts.length-1];
+  const col=SEG_COLORS[S.segments.length%SEG_COLORS.length];
+  const dist=pd2(ptFin,ptIni);
+  const la=LETTERS[S.segments.length], lb=LETTERS[0];
+  S.segments.push({id:'close',labelA:la,labelB:lb,pts:[ptFin,ptIni],color:col,dist});
+  S.polygon=S.segments.flatMap(s=>s.pts);
+  hide('btnCerrar'); hide('btnPrincipal');
+  show('btnEdit');
+  document.getElementById('sboxTitle').textContent='🔒 Perímetro cerrado';
+  document.getElementById('sboxSub').textContent='Terreno delimitado · toca "Editar" para ajustar';
+  document.getElementById('sboxIcon').textContent='🌾';
+  renderSegList(); updateSegStats(); draw();
+}
+
+// ═══════════════════════════════════════════════════════
+// RENDER LISTA SEGMENTOS
+// ═══════════════════════════════════════════════════════
+function renderSegList(){
+  const el=document.getElementById('segList'); el.innerHTML='';
+  S.segments.forEach((seg,i)=>{
+    const ci=i%6;
+    const d=document.createElement('div'); d.className='seg-item';
+    d.innerHTML=`
+      <div class="seg-letter c${ci}" style="border:1px solid ${seg.color}44">${seg.labelA}→${seg.labelB}</div>
+      <div class="seg-info">
+        <div class="seg-name" style="color:${seg.color}">${seg.labelA} → ${seg.labelB}</div>
+        <div class="seg-meta">${fmtD(seg.dist)} · ${seg.pts.length} puntos</div>
+      </div>
+      <div class="seg-btns">
+        <button class="seg-btn" onclick="editarSegmento(${i})">✏️</button>
+        <button class="seg-btn del" onclick="deleteSeg('${seg.id}')">✕</button>
+      </div>`;
+    el.appendChild(d);
+  });
+}
+
+function editarSegmento(si){
+  // Activar modo edición y centrar vista en ese segmento
+  if(!S.editMode) toggleEdit();
+  const seg=S.segments[si];
+  if(seg.pts.length>0){
+    const mid=seg.pts[Math.floor(seg.pts.length/2)];
+    S.ox=-mid.x*S.zoom; S.oy=-mid.y*S.zoom;
+  }
+  draw();
+}
+
+function deleteSeg(id){
+  S.segments=S.segments.filter(s=>s.id!==id);
+  S.polygon=null; S.selectedPt=null; S.movingPt=null;
+  closePtPopup();
+  if(S.segments.length===0){
+    document.getElementById('sboxTitle').textContent='Sin trazados';
+    document.getElementById('sboxSub').textContent='Inicia un nuevo segmento para comenzar';
+    document.getElementById('sboxIcon').textContent='🗺️';
+    document.getElementById('btnPrincipal').innerHTML='📍 INICIAR NUEVO SEGMENTO';
+    show('btnPrincipal'); hide('btnEdit'); hide('btnCerrar');
+    S.editMode=false; hide('editBadge');
+  }
+  renderSegList(); updateSegStats(); draw();
+}
+
+function updateSegStats(){
+  const n=S.segments.length;
+  let tot=S.segments.reduce((s,seg)=>s+seg.dist,0);
+  document.getElementById('tSegs').textContent=n;
+  document.getElementById('tDist').textContent=n>0?fmtD(tot):'0m';
+  if(S.polygon&&S.polygon.length>=3){
+    let area=0; const p=S.polygon;
+    for(let i=0;i<p.length;i++){ const j=(i+1)%p.length; area+=p[i].x*p[j].y-p[j].x*p[i].y; }
+    const m2=Math.abs(area/2)*S.MPU*S.MPU;
+    document.getElementById('tArea').textContent=m2>10000?(m2/10000).toFixed(2)+'ha':Math.round(m2)+'m²';
+  } else { document.getElementById('tArea').textContent='—'; }
+}
+
+// ═══════════════════════════════════════════════════════
+// DEMO
+// ═══════════════════════════════════════════════════════
+function loadDemo(){
+  clearAll();
+  const corners=[{x:-80,y:-70},{x:80,y:-75},{x:85,y:72},{x:-75,y:78}];
+  [[0,1],[1,2],[2,3],[3,0]].forEach(([f,t],i)=>{
+    const col=SEG_COLORS[i%SEG_COLORS.length];
+    const pA=corners[f],pB=corners[t];
+    const pts=[]; for(let s=0;s<=1;s+=0.1) pts.push({x:pA.x+(pB.x-pA.x)*s,y:pA.y+(pB.y-pA.y)*s});
+    S.segments.push({id:'d'+i,labelA:LETTERS[f],labelB:LETTERS[t],pts,color:col,dist:pd2(pA,pB)});
+  });
+  S.polygon=[...corners];
+  hide('btnPrincipal'); hide('btnCerrar'); show('btnEdit');
+  document.getElementById('sboxTitle').textContent='🌾 Demo — 4 segmentos A→B→C→D→A';
+  document.getElementById('sboxSub').textContent='Toca "Editar" para mover o borrar puntos';
+  document.getElementById('sboxIcon').textContent='🌾';
+  renderSegList(); updateSegStats(); draw();
+}
+
+function clearAll(){
+  if(S.activeGpsId!==null){ navigator.geolocation.clearWatch(S.activeGpsId); S.activeGpsId=null; }
+  S.segments=[]; S.activePts=[]; S.activeSegId=null; S.polygon=null;
+  S.activeSegDist=0; S.editMode=false; S.selectedPt=null; S.movingPt=null;
+  closePtPopup();
+  hide('activeSeg'); hide('editBadge'); hide('btnFinalizar'); hide('btnUndo'); hide('btnEdit'); hide('btnCerrar');
+  show('btnPrincipal'); document.getElementById('btnPrincipal').innerHTML='📍 INICIAR NUEVO SEGMENTO';
+  hide('gps'); document.getElementById('mpill').innerHTML='<div class="dl"></div>LISTO';
+  document.getElementById('sboxTitle').textContent='Sin trazados';
+  document.getElementById('sboxSub').textContent='Inicia un nuevo segmento para comenzar';
+  document.getElementById('sboxIcon').textContent='🗺️';
+  document.getElementById('allist').innerHTML='<div class="empty">Sin alertas recientes</div>';
+  document.getElementById('opill').style.display='none';
+  renderSegList(); updateSegStats(); draw();
+}
+
+// ═══════════════════════════════════════════════════════
+// ANIMALES
+// ═══════════════════════════════════════════════════════
+const AN=['Manchas','Lucero','Canela','Toro Rey','Negra'];
+const AB=['Brahman','Angus','Holstein','Cebú','Gyr'];
+const AC=['#D4A017','#5B9BD5','#8BC34A','#E57373','#CE93D8'];
+
+function initAnimals(){
+  S.animals=AN.map((n,i)=>{
+    const a=(i/AN.length)*Math.PI*2;
+    return {id:i,name:n,breed:AB[i],color:AC[i],x:Math.cos(a)*55,y:Math.sin(a)*45,vx:(Math.random()-0.5)*0.3,vy:(Math.random()-0.5)*0.3,trail:[],inside:true};
+  }); renderAnimals();
+}
+
+function pip(x,y,poly){
+  let ins=false;
+  for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+    const xi=poly[i].x,yi=poly[i].y,xj=poly[j].x,yj=poly[j].y;
+    if(((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi)) ins=!ins;
+  } return ins;
+}
+
+function tickAnimals(){
+  S.tick++;
+  S.animals.forEach(a=>{
+    a.trail.push({x:a.x,y:a.y}); if(a.trail.length>35) a.trail.shift();
+    a.vx+=(Math.random()-0.5)*0.12; a.vy+=(Math.random()-0.5)*0.12;
+    a.vx*=0.93; a.vy*=0.93;
+    a.vx=Math.max(-0.7,Math.min(0.7,a.vx)); a.vy=Math.max(-0.7,Math.min(0.7,a.vy));
+    a.x+=a.vx; a.y+=a.vy;
+    const was=a.inside;
+    a.inside=S.polygon&&S.polygon.length>=3?pip(a.x,a.y,S.polygon):true;
+    if(was&&!a.inside) trigAlert(a);
+    if(!was&&a.inside) addAlEntry(`${a.name} regresó`,false);
+  });
+  updateAnimalStats(); renderAnimals(); draw();
+}
+
+function trigAlert(a){
+  document.getElementById('apbody').textContent=`${a.name} (${a.breed}) salió del perímetro.`;
+  show('apop'); setTimeout(()=>hide('apop'),5000);
+  addAlEntry(`⚠ ${a.name} salió`,true);
+  show('opill'); if(navigator.vibrate) navigator.vibrate([200,80,200]);
+}
+function closeAlert(){ hide('apop'); }
+
+function addAlEntry(txt,warn){
+  const el=document.getElementById('allist');
+  const emp=el.querySelector('.empty'); if(emp) emp.remove();
+  const t=new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const d=document.createElement('div'); d.className=`alrow ${warn?'w':'ok'}`;
+  d.innerHTML=`<div class="alt ${warn?'w':'ok'}">${txt}</div><div class="altime">${t}</div>`;
+  el.insertBefore(d,el.firstChild); if(el.children.length>10) el.removeChild(el.lastChild);
+}
+
+function updateAnimalStats(){
+  const out=S.animals.filter(a=>!a.inside).length;
+  document.getElementById('ocnt').textContent=out;
+  if(out>0) show('opill');
+}
+
+function renderAnimals(){
+  const el=document.getElementById('alist'); el.innerHTML='';
+  S.animals.forEach(a=>{
+    const g=v2geo(a.x,a.y); const d=document.createElement('div'); d.className=`arow${!a.inside?' out':''}`;
+    d.innerHTML=`<div class="adot${!a.inside?' out':''}" style="background:${!a.inside?'#FF4D1C':a.color}"></div>
+      <div class="ainfo"><div class="aname">${a.name} <span style="font-size:0.6rem;font-weight:400;color:var(--dim)">${a.breed}</span></div>
+      <div class="acoord${!a.inside?' out':''}">${!a.inside?'⚠ FUERA DEL TERRENO':`${g.lat.toFixed(4)}°N, ${g.lon.toFixed(4)}°O`}</div></div>
+      <div class="aclr" style="background:${a.color}"></div>`;
+    el.appendChild(d);
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════════
+function goTab(t){
+  [['trazar','cTrazar','tTrazar'],['rastreo','cRastreo','tRastreo'],['alertas','cAlertas','tAlertas']].forEach(([k,c,tid])=>{
+    document.getElementById(c).classList.toggle('on',k===t);
+    document.getElementById(tid).classList.toggle('on',k===t);
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// CONTROLES MAPA
+// ═══════════════════════════════════════════════════════
+function doZoom(f){ S.zoom=Math.max(0.3,Math.min(6,S.zoom*f)); draw(); }
+function centerMe(){ S.ox=0; S.oy=0; draw(); }
+
+// ═══════════════════════════════════════════════════════
+// EVENTOS CANVAS  (touch + mouse)
+// ═══════════════════════════════════════════════════════
+let pinching=false, pinchDist0=0;
+
+// ── Determinar qué hacer con un tap/click ──
+function handleTap(cx,cy){
+  // 1. Si hay popup abierto → cerrar
+  if(document.getElementById('ptPopup').style.display==='block'){ closePtPopup(); return; }
+  // 2. Modo edición: buscar punto cercano para mostrar popup
+  if(S.editMode&&!S.movingPt){
+    const found=findNearestPt(cx,cy);
+    if(found){ showPtPopup(found.si,found.pi,cx,cy); return; }
+    return;
+  }
+  // 3. Modo manual de trazado
+  if(S.activeMode==='manual'){ addManualPt(cx,cy); return; }
+}
+
+// ── touch ──
+cv.addEventListener('touchstart',e=>{
+  e.preventDefault();
+  if(e.touches.length===2){ pinching=true; S.mapDrag=false; pinchDist0=Math.hypot(e.touches[1].clientX-e.touches[0].clientX,e.touches[1].clientY-e.touches[0].clientY); return; }
+  const x=e.touches[0].clientX, y=e.touches[0].clientY;
+  // Si movingPt activo, iniciar arrastre directo
+  if(S.movingPt){ return; }
+  // Si edición y hay punto cercano, preparar arrastre
+  if(S.editMode){ const f=findNearestPt(x,y); if(f){ S.movingPt=f; return; } }
+  S.mapDrag=true; S.mapMoved=0; S.mapDragLast={x,y};
+},{passive:false});
+
+cv.addEventListener('touchmove',e=>{
+  e.preventDefault();
+  if(pinching&&e.touches.length===2){
+    const d=Math.hypot(e.touches[1].clientX-e.touches[0].clientX,e.touches[1].clientY-e.touches[0].clientY);
+    S.zoom=Math.max(0.3,Math.min(6,S.zoom*(d/pinchDist0))); pinchDist0=d; draw(); return;
+  }
+  const x=e.touches[0].clientX, y=e.touches[0].clientY;
+  if(S.movingPt){
+    const vp=c2v(x,y);
+    S.segments[S.movingPt.si].pts[S.movingPt.pi]=vp;
+    recalcSegDist(S.movingPt.si); draw(); return;
+  }
+  if(S.mapDrag){
+    const dx=x-S.mapDragLast.x, dy=y-S.mapDragLast.y;
+    S.mapMoved+=Math.abs(dx)+Math.abs(dy);
+    if(S.activeMode!=='manual'){ S.ox+=dx; S.oy+=dy; }
+    S.mapDragLast={x,y}; draw();
+  }
+},{passive:false});
+
+cv.addEventListener('touchend',e=>{
+  const wasPinch=pinching; pinching=false;
+  const wasMoving=S.movingPt!==null;
+  if(wasMoving){ S.movingPt=null; document.getElementById('editBadge').innerHTML='✏️ <b>MODO EDICIÓN</b><br>Toca un punto del mapa para moverlo o borrarlo'; rebuildPolygon(); updateSegStats(); draw(); return; }
+  const wasDrag=S.mapDrag; S.mapDrag=false;
+  if(!wasPinch&&!wasMoving&&S.mapMoved<12&&e.changedTouches.length>0)
+    handleTap(e.changedTouches[0].clientX,e.changedTouches[0].clientY);
+});
+
+// ── mouse ──
+cv.addEventListener('mousedown',e=>{
+  if(S.editMode){ const f=findNearestPt(e.clientX,e.clientY); if(f){ S.movingPt=f; return; } }
+  S.mapDrag=true; S.mapMoved=0; S.mapDragLast={x:e.clientX,y:e.clientY};
+});
+cv.addEventListener('mousemove',e=>{
+  if(S.movingPt){ const vp=c2v(e.clientX,e.clientY); S.segments[S.movingPt.si].pts[S.movingPt.pi]=vp; recalcSegDist(S.movingPt.si); draw(); return; }
+  if(!S.mapDrag) return;
+  const dx=e.clientX-S.mapDragLast.x, dy=e.clientY-S.mapDragLast.y;
+  S.mapMoved+=Math.abs(dx)+Math.abs(dy);
+  if(S.activeMode!=='manual'){ S.ox+=dx; S.oy+=dy; }
+  S.mapDragLast={x:e.clientX,y:e.clientY}; draw();
+});
+cv.addEventListener('mouseup',e=>{
+  if(S.movingPt){ S.movingPt=null; document.getElementById('editBadge').innerHTML='✏️ <b>MODO EDICIÓN</b><br>Toca un punto del mapa para moverlo o borrarlo'; rebuildPolygon(); updateSegStats(); draw(); return; }
+  if(S.mapDrag&&S.mapMoved<5) handleTap(e.clientX,e.clientY);
+  S.mapDrag=false;
+});
+cv.addEventListener('wheel',e=>{ e.preventDefault(); doZoom(e.deltaY<0?1.1:0.9); },{passive:false});
+
+function recalcSegDist(si){
+  const seg=S.segments[si]; seg.dist=0;
+  for(let i=1;i<seg.pts.length;i++) seg.dist+=pd2(seg.pts[i-1],seg.pts[i]);
+}
+
+// ═══════════════════════════════════════════════════════
+// PANEL DESLIZABLE
+// ═══════════════════════════════════════════════════════
+const bp=document.getElementById('bp'), hdl=document.getElementById('hdl');
+let panelOpen=true, pDragY=0, pStartT=0, pCurT=0, pLastY=0, pLastTime=0;
+
+function setPanelY(y,anim){
+  bp.style.transition=anim?'transform 0.28s cubic-bezier(0.4,0,0.2,1)':'none';
+  bp.style.transform=`translateY(${Math.round(y)}px)`; pCurT=y;
+}
+function peekH(){ return bp.offsetHeight-72; }
+function snapPanel(vel){ if(vel>220||pCurT>peekH()*0.4){panelOpen=false;setPanelY(peekH(),true);}else{panelOpen=true;setPanelY(0,true);} }
+
+hdl.addEventListener('touchstart',e=>{ pDragY=e.touches[0].clientY; pStartT=pCurT; pLastY=pDragY; pLastTime=Date.now(); bp.style.transition='none'; },{passive:true});
+hdl.addEventListener('touchmove',e=>{ const dy=e.touches[0].clientY-pDragY; setPanelY(Math.max(0,Math.min(peekH(),pStartT+dy)),false); pLastY=e.touches[0].clientY; pLastTime=Date.now(); },{passive:true});
+hdl.addEventListener('touchend',e=>{ const dt=Math.max(1,Date.now()-pLastTime); snapPanel((e.changedTouches[0].clientY-pLastY)/dt*1000); });
+hdl.addEventListener('click',()=>{ if(!panelOpen){panelOpen=true;setPanelY(0,true);}else{panelOpen=false;setPanelY(peekH(),true);} });
+hdl.addEventListener('mousedown',e=>{
+  pDragY=e.clientY; pStartT=pCurT; pLastY=e.clientY; pLastTime=Date.now(); bp.style.transition='none';
+  const mv=ev=>{ const dy=ev.clientY-pDragY; setPanelY(Math.max(0,Math.min(peekH(),pStartT+dy)),false); pLastY=ev.clientY; pLastTime=Date.now(); };
+  const up=ev=>{ snapPanel((ev.clientY-pLastY)/Math.max(1,Date.now()-pLastTime)*1000); window.removeEventListener('mousemove',mv); window.removeEventListener('mouseup',up); };
+  window.addEventListener('mousemove',mv); window.addEventListener('mouseup',up);
+});
+
+// ═══════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════
+function show(id){ const el=document.getElementById(id); if(el) el.style.display=''; }
+function hide(id){ const el=document.getElementById(id); if(el) el.style.display='none'; }
+
+// ═══════════════════════════════════════════════════════
+// INICIO
+// ═══════════════════════════════════════════════════════
+resize();
+initAnimals();
+loadDemo();
+
+if('geolocation'in navigator){
+  navigator.geolocation.getCurrentPosition(p=>{
+    S.myLat=p.coords.latitude; S.myLon=p.coords.longitude; draw();
+  },()=>{},{enableHighAccuracy:true});
+}
+setInterval(tickAnimals,800);
+</script>
+</body>
+</html>
