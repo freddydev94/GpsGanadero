@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>GanadoGPS</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --pasto:#3D6B35; --neon:#7ED56F; --alerta:#FF4D1C;
+  --oro:#D4A017; --panel:#0D1C0B; --panel2:#142012;
+  --borde:#1E3A1A; --txt:#E8F5E1; --dim:#5A8050;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'Syne',sans-serif;background:#111;color:var(--txt);user-select:none}
+
+/* CANVAS */
+#cv{position:fixed;top:0;left:0;width:100%;height:100%}
+
+/* TOPBAR */
+#tb{position:fixed;top:0;left:0;right:0;height:52px;background:rgba(13,28,11,0.93);backdrop-filter:blur(10px);border-bottom:1px solid var(--borde);display:flex;align-items:center;padding:0 12px;gap:8px;z-index:200}
+.logo{width:32px;height:32px;background:var(--pasto);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+#tb h1{font-size:1.05rem;font-weight:800;color:var(--neon);flex:1}
+.pill{display:flex;align-items:center;gap:4px;background:var(--panel2);border:1px solid var(--borde);border-radius:20px;padding:3px 9px;font-size:0.6rem;font-family:'Space Mono',monospace;white-space:nowrap}
+.dl{width:6px;height:6px;border-radius:50%;background:var(--neon);animation:bl 1.5s infinite}
+.dr{width:6px;height:6px;border-radius:50%;background:var(--alerta);animation:bl 0.8s infinite}
+@keyframes bl{0%,100%{opacity:1}50%{opacity:0.2}}
+
+/* PANEL — posicionado FIXED con altura conocida */
+#bp{
+  position:fixed;left:0;right:0;
+  background:rgba(13,28,11,0.97);
+  backdrop-filter:blur(14px);
+  border-top:1px solid var(--borde);
+  border-radius:18px 18px 0 0;
+  z-index:200;
+  /* altura fija del contenido */
+  height:auto;
+  /* lo colocamos por bottom, y lo movemos con bottom: */
+  bottom:0;
+  transform:translateY(0);
+  transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* handle — área amplia para tocar */
+#hdl{
+  width:100%;padding:14px 0 8px;
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  cursor:grab;touch-action:none;
+}
+#hdl-bar{width:44px;height:5px;background:var(--dim);border-radius:3px;transition:background 0.2s}
+#hdl:active #hdl-bar{background:var(--neon)}
+#hdl-hint{font-size:0.55rem;color:var(--dim);font-family:'Space Mono',monospace;letter-spacing:1px;opacity:0.7}
+
+/* TABS */
+.tabs{display:flex;gap:6px;padding:0 14px 10px}
+.tab{flex:1;padding:7px 4px;background:var(--panel2);border:1px solid var(--borde);border-radius:9px;color:var(--dim);font-family:'Syne',sans-serif;font-size:0.7rem;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;transition:all 0.18s}
+.tab .ti{font-size:1rem}
+.tab.on{background:var(--pasto);border-color:var(--neon);color:#fff;box-shadow:0 0 12px rgba(126,213,111,0.2)}
+
+/* CONTENIDO TABS */
+.tc{display:none;padding:0 14px 24px}
+.tc.on{display:block}
+
+/* STATUS BOX */
+.sbox{background:var(--panel2);border:1px solid var(--borde);border-radius:11px;padding:10px 13px;margin-bottom:10px;display:flex;align-items:center;gap:10px}
+.sbox .si{font-size:1.3rem}
+.sbox .st{font-size:0.82rem;font-weight:700}
+.sbox .ss{font-size:0.62rem;color:var(--dim);font-family:'Space Mono',monospace;margin-top:2px}
+
+/* BOTONES */
+.bmain{width:100%;padding:13px;border-radius:13px;border:none;font-family:'Syne',sans-serif;font-size:0.95rem;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all 0.18s}
+.bstart{background:var(--neon);color:#0D1C0B;box-shadow:0 3px 16px rgba(126,213,111,0.3)}
+.bstart:active{transform:scale(0.97)}
+.bstop{background:var(--alerta);color:#fff;animation:pb 2s infinite}
+@keyframes pb{0%,100%{box-shadow:0 3px 16px rgba(255,77,28,0.3)}50%{box-shadow:0 3px 24px rgba(255,77,28,0.6)}}
+.bstop:active{transform:scale(0.97)}
+.brow{display:flex;gap:7px;margin-top:8px}
+.bsec{flex:1;padding:9px;background:var(--panel2);border:1px solid var(--borde);border-radius:9px;color:var(--txt);font-family:'Syne',sans-serif;font-size:0.75rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;transition:all 0.18s}
+.bsec:active{background:var(--borde)}
+.bsec.red{color:var(--alerta);border-color:rgba(255,77,28,0.3)}
+
+/* STATS */
+.sts{display:flex;gap:7px;margin-top:9px}
+.st1{flex:1;background:var(--panel2);border:1px solid var(--borde);border-radius:9px;padding:7px;text-align:center}
+.sv{font-size:1rem;font-weight:800;font-family:'Space Mono',monospace;color:var(--neon)}
+.sk{font-size:0.52rem;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-top:1px}
+
+/* ANIMALES */
+.alist{display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto}
+.alist::-webkit-scrollbar{width:3px}
+.alist::-webkit-scrollbar-thumb{background:var(--borde)}
+.arow{background:var(--panel2);border:1px solid var(--borde);border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:9px}
+.arow.out{border-color:rgba(255,77,28,0.4);background:rgba(255,77,28,0.06)}
+.adot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.adot.out{animation:bl 0.8s infinite}
+.ainfo{flex:1}
+.aname{font-size:0.82rem;font-weight:700}
+.acoord{font-size:0.6rem;font-family:'Space Mono',monospace;color:var(--dim);margin-top:2px}
+.acoord.out{color:var(--alerta)}
+.aclr{width:11px;height:11px;border-radius:3px}
+
+/* ALERTAS */
+.allist{display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto}
+.alrow{border-radius:9px;padding:9px 11px}
+.alrow.w{background:rgba(255,77,28,0.08);border:1px solid rgba(255,77,28,0.25)}
+.alrow.ok{background:rgba(61,107,53,0.1);border:1px solid rgba(126,213,111,0.2)}
+.alt{font-size:0.76rem;font-weight:600}
+.alt.w{color:#FF8B6A}.alt.ok{color:var(--neon)}
+.altime{font-size:0.58rem;font-family:'Space Mono',monospace;color:var(--dim);margin-top:2px}
+
+/* GPS BADGE */
+#gps{position:fixed;top:62px;left:50%;transform:translateX(-50%);background:rgba(13,28,11,0.93);border:1px solid var(--borde);border-radius:20px;padding:4px 13px;font-size:0.62rem;font-family:'Space Mono',monospace;color:var(--dim);z-index:190;display:none;white-space:nowrap;backdrop-filter:blur(8px)}
+#gps span{color:var(--neon)}
+
+/* ALERT POPUP */
+#apop{position:fixed;top:62px;left:12px;right:12px;background:var(--alerta);border-radius:13px;padding:13px 15px;z-index:300;display:none;box-shadow:0 6px 28px rgba(255,77,28,0.45);animation:pi 0.28s ease}
+@keyframes pi{from{transform:translateY(-16px);opacity:0}to{transform:translateY(0);opacity:1}}
+.apt{font-size:0.88rem;font-weight:800;display:flex;align-items:center;gap:7px}
+.apb{font-size:0.72rem;margin-top:5px;opacity:0.9;font-family:'Space Mono',monospace}
+.apc{position:absolute;top:9px;right:11px;background:none;border:none;color:#fff;font-size:1rem;cursor:pointer}
+
+/* ZOOM */
+#zmb{position:fixed;right:12px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:6px;z-index:190}
+.zb{width:38px;height:38px;background:rgba(13,28,11,0.9);border:1px solid var(--borde);border-radius:9px;color:var(--txt);font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px)}
+
+/* MI POSICIÓN */
+#mlb{position:fixed;right:12px;z-index:190;background:rgba(13,28,11,0.9);border:1px solid var(--borde);border-radius:9px;color:var(--neon);font-size:1.1rem;width:38px;height:38px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);bottom:8px}
+
+.empty{text-align:center;color:var(--dim);font-size:0.7rem;font-family:'Space Mono',monospace;padding:14px 0}
+
+/* MODO EDICIÓN hint */
+#editHint{position:fixed;top:62px;left:12px;right:12px;background:rgba(212,160,23,0.15);border:1px solid var(--oro);border-radius:10px;padding:7px 13px;font-size:0.7rem;color:var(--oro);font-family:'Space Mono',monospace;z-index:190;display:none;text-align:center}
+</style>
+</head>
+<body>
+
+<canvas id="cv"></canvas>
+
+<!-- TOPBAR -->
+<header id="tb">
+  <div class="logo">🐄</div>
+  <h1>GanadoGPS</h1>
+  <div class="pill" id="mpill"><div class="dl"></div>RASTREO</div>
+  <div class="pill" id="opill" style="display:none"><span id="ocnt" style="color:var(--alerta)">0</span>&nbsp;fuera</div>
+</header>
+
+<!-- GPS -->
+<div id="gps">📍 GPS: <span id="gacc">buscando...</span></div>
+
+<!-- EDIT HINT -->
+<div id="editHint">✋ Arrastra un punto para moverlo · Toca fuera para salir</div>
+
+<!-- ALERT POPUP -->
+<div id="apop">
+  <button class="apc" onclick="closeAlert()">✕</button>
+  <div class="apt">🚨 ¡ANIMAL FUERA!</div>
+  <div class="apb" id="apbody">—</div>
+</div>
+
+<!-- ZOOM -->
+<div id="zmb">
+  <button class="zb" onclick="doZoom(1.2)">+</button>
+  <button class="zb" onclick="doZoom(0.83)">−</button>
+</div>
+
+<!-- MI UBICACIÓN -->
+<button id="mlb" onclick="centerMe()">📍</button>
+
+<!-- PANEL INFERIOR -->
+<div id="bp">
+  <!-- HANDLE DRAGGABLE -->
+  <div id="hdl">
+    <div id="hdl-bar"></div>
+    <div id="hdl-hint">DESLIZA ↑↓</div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <div class="tab on" id="tTrace" onclick="goTab('trace')"><span class="ti">✏️</span>Trazar</div>
+    <div class="tab"    id="tTrack" onclick="goTab('track')"><span class="ti">📡</span>Rastreo</div>
+    <div class="tab"    id="tAlt"   onclick="goTab('alerts')"><span class="ti">🔔</span>Alertas</div>
+  </div>
+
+  <!-- TAB TRAZAR -->
+  <div class="tc on" id="cTrace">
+    <div class="sbox">
+      <div class="si">🗺️</div>
+      <div>
+        <div class="st" id="trtitle">Listo para trazar</div>
+        <div class="ss" id="trsub">Presiona INICIAR o usa Demo para probar</div>
+      </div>
+    </div>
+    <button class="bmain bstart" id="btnT" onclick="toggleTrace()">📍 INICIAR TRAZADO</button>
+    <div class="sts">
+      <div class="st1"><div class="sv" id="sPts">0</div><div class="sk">Puntos</div></div>
+      <div class="st1"><div class="sv" id="sDist">0m</div><div class="sk">Perímetro</div></div>
+      <div class="st1"><div class="sv" id="sArea">—</div><div class="sk">Área</div></div>
+    </div>
+    <div class="brow">
+      <button class="bsec" onclick="toggleEdit()" id="btnEdit" style="display:none">✏️ Editar puntos</button>
+      <button class="bsec" onclick="loadDemo()">🌾 Demo</button>
+      <button class="bsec red" onclick="clearAll()">🗑 Limpiar</button>
+    </div>
+  </div>
+
+  <!-- TAB RASTREO -->
+  <div class="tc" id="cTrack">
+    <div class="alist" id="alist"></div>
+  </div>
+
+  <!-- TAB ALERTAS -->
+  <div class="tc" id="cAlt">
+    <div class="allist" id="allist"><div class="empty">Sin alertas recientes</div></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+// CANVAS
+// ═══════════════════════════════════════
+const cv  = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+
+function resize(){
+  cv.width  = window.innerWidth;
+  cv.height = window.innerHeight;
+  draw();
+}
+window.addEventListener('resize', resize);
+
+// ═══════════════════════════════════════
+// ESTADO
+// ═══════════════════════════════════════
+const S = {
+  terrain:[], traceMode:'idle', gpsId:null,
+  zoom:1, ox:0, oy:0,
+  myLat:null, myLon:null,
+  centerLat:9.7489, centerLon:83.7534,
+  MPU:2, // metros por unidad virtual
+  animals:[], alerts:[], tick:0,
+  editMode:false, dragPtIdx:-1,
+  lastGpsVp:null,
+};
+
+// ─── coord helpers ───
+function g2v(lat,lon){
+  return {
+    x:(lon-S.centerLon)*111000*Math.cos(S.centerLat*Math.PI/180)/S.MPU,
+    y:-(lat-S.centerLat)*111000/S.MPU
+  };
+}
+function v2c(vx,vy){
+  return { x:cv.width/2+vx*S.zoom+S.ox, y:cv.height/2+vy*S.zoom+S.oy };
+}
+function c2v(cx,cy){
+  return { x:(cx-cv.width/2-S.ox)/S.zoom, y:(cy-cv.height/2-S.oy)/S.zoom };
+}
+function v2geo(vx,vy){
+  return {
+    lat:S.centerLat - vy*S.MPU/111000,
+    lon:S.centerLon + vx*S.MPU/(111000*Math.cos(S.centerLat*Math.PI/180))
+  };
+}
+
+// ═══════════════════════════════════════
+// DIBUJO
+// ═══════════════════════════════════════
+function draw(){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  drawBg();
+  if(S.terrain.length>=3) drawTerrain();
+  else if(S.terrain.length>0) drawPartial();
+  S.animals.forEach(a=>{ drawTrail(a); drawAnimal(a); });
+  if(S.myLat) drawMe();
+}
+
+function drawBg(){
+  const g=ctx.createLinearGradient(0,0,0,cv.height);
+  g.addColorStop(0,'#1B3018'); g.addColorStop(1,'#111D10');
+  ctx.fillStyle=g; ctx.fillRect(0,0,cv.width,cv.height);
+  ctx.strokeStyle='rgba(40,80,35,0.16)'; ctx.lineWidth=1;
+  const gs=60*S.zoom;
+  const ox=((S.ox%gs)+gs)%gs, oy=((S.oy%gs)+gs)%gs;
+  for(let x=ox-gs;x<cv.width+gs;x+=gs){ ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,cv.height);ctx.stroke(); }
+  for(let y=oy-gs;y<cv.height+gs;y+=gs){ ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(cv.width,y);ctx.stroke(); }
+}
+
+function drawTerrain(){
+  const pts=S.terrain.map(p=>v2c(p.x,p.y));
+  ctx.beginPath();
+  pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
+  ctx.closePath();
+  ctx.fillStyle='rgba(126,213,111,0.07)'; ctx.fill();
+  ctx.strokeStyle='#7ED56F'; ctx.lineWidth=2.5;
+  ctx.setLineDash([9,5]); ctx.stroke(); ctx.setLineDash([]);
+
+  pts.forEach((p,i)=>{
+    const isClose = S.traceMode==='manual' && i===0 && S.terrain.length>=4;
+    const r = S.editMode ? 10 : (isClose ? 10 : 5);
+    ctx.beginPath(); ctx.arc(p.x,p.y,r,0,Math.PI*2);
+    ctx.fillStyle = S.editMode ? '#D4A017' : (isClose ? '#7ED56F' : '#7ED56F');
+    ctx.fill();
+    ctx.strokeStyle = S.editMode ? '#fff' : '#1B3018';
+    ctx.lineWidth=2; ctx.stroke();
+    if(S.editMode){
+      ctx.font='bold 10px Syne'; ctx.fillStyle='#0D1C0B';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(i+1, p.x, p.y);
+    } else if(isClose){
+      ctx.font='bold 9px Syne'; ctx.fillStyle='#0D1C0B';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('✓', p.x, p.y);
+    }
+  });
+}
+
+function drawPartial(){
+  if(S.terrain.length===0) return;
+  const pts=S.terrain.map(p=>v2c(p.x,p.y));
+  ctx.beginPath();
+  pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
+  ctx.strokeStyle='rgba(126,213,111,0.5)'; ctx.lineWidth=2;
+  ctx.setLineDash([6,4]); ctx.stroke(); ctx.setLineDash([]);
+  pts.forEach((p,i)=>{
+    ctx.beginPath(); ctx.arc(p.x,p.y,5,0,Math.PI*2);
+    ctx.fillStyle='rgba(126,213,111,0.8)'; ctx.fill();
+    ctx.strokeStyle='#111'; ctx.lineWidth=1.5; ctx.stroke();
+  });
+}
+
+function drawTrail(a){
+  if(a.trail.length<2) return;
+  ctx.beginPath();
+  a.trail.forEach((p,i)=>{ const c=v2c(p.x,p.y); i?ctx.lineTo(c.x,c.y):ctx.moveTo(c.x,c.y); });
+  ctx.strokeStyle=a.inside?`${a.color}50`:'rgba(255,77,28,0.3)';
+  ctx.lineWidth=1.5; ctx.stroke();
+}
+
+function drawAnimal(a){
+  const pos=v2c(a.x,a.y); const r=9;
+  if(!a.inside){
+    ctx.beginPath(); ctx.arc(pos.x,pos.y,r+6+Math.sin(S.tick*0.08)*3,0,Math.PI*2);
+    ctx.strokeStyle='rgba(255,77,28,0.4)'; ctx.lineWidth=2; ctx.stroke();
+  }
+  ctx.beginPath(); ctx.arc(pos.x,pos.y,r,0,Math.PI*2);
+  ctx.fillStyle=a.inside?a.color:'#FF4D1C'; ctx.fill();
+  ctx.strokeStyle='#111'; ctx.lineWidth=2; ctx.stroke();
+  ctx.font=`${r*1.3}px serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('🐄',pos.x,pos.y-0.5);
+  ctx.font='bold 9px Syne'; ctx.fillStyle='#E8F5E1';
+  ctx.textBaseline='top'; ctx.fillText(a.name,pos.x,pos.y+r+3);
+  if(!a.inside){ ctx.font='bold 8px Space Mono'; ctx.fillStyle='#FF4D1C'; ctx.fillText('⚠ FUERA',pos.x,pos.y+r+15); }
+}
+
+function drawMe(){
+  const vp=g2v(S.myLat,S.myLon); const pos=v2c(vp.x,vp.y);
+  ctx.beginPath(); ctx.arc(pos.x,pos.y,14+Math.sin(S.tick*0.06)*3,0,Math.PI*2);
+  ctx.fillStyle='rgba(126,213,111,0.1)'; ctx.fill();
+  ctx.beginPath(); ctx.arc(pos.x,pos.y,9,0,Math.PI*2);
+  ctx.fillStyle='#7ED56F'; ctx.fill();
+  ctx.strokeStyle='white'; ctx.lineWidth=2.5; ctx.stroke();
+  ctx.font='bold 8px Syne'; ctx.fillStyle='white';
+  ctx.textAlign='center'; ctx.textBaseline='top'; ctx.fillText('TÚ',pos.x,pos.y+11);
+}
+
+// ═══════════════════════════════════════
+// ANIMALES
+// ═══════════════════════════════════════
+const ANOMS=['Manchas','Lucero','Canela','Toro Rey','Negra'];
+const ABRED=['Brahman','Angus','Holstein','Cebú','Gyr'];
+const ACLR =['#D4A017','#5B9BD5','#8BC34A','#E57373','#CE93D8'];
+
+function initAnimals(){
+  S.animals=ANOMS.map((n,i)=>{
+    const a=(i/ANOMS.length)*Math.PI*2;
+    return {id:i,name:n,breed:ABRED[i],color:ACLR[i],x:Math.cos(a)*55,y:Math.sin(a)*45,vx:(Math.random()-0.5)*0.3,vy:(Math.random()-0.5)*0.3,trail:[],inside:true};
+  });
+  renderAnimals();
+}
+
+function tickAnimals(){
+  S.tick++;
+  S.animals.forEach(a=>{
+    a.trail.push({x:a.x,y:a.y});
+    if(a.trail.length>35) a.trail.shift();
+    a.vx+=(Math.random()-0.5)*0.12; a.vy+=(Math.random()-0.5)*0.12;
+    a.vx*=0.93; a.vy*=0.93;
+    a.vx=Math.max(-0.7,Math.min(0.7,a.vx)); a.vy=Math.max(-0.7,Math.min(0.7,a.vy));
+    a.x+=a.vx; a.y+=a.vy;
+    const was=a.inside;
+    a.inside=S.terrain.length>=3?pip(a.x,a.y,S.terrain):true;
+    if(was&&!a.inside) trigAlert(a);
+    if(!was&&a.inside) addAlEntry(`${a.name} regresó`,false);
+  });
+  updateStats(); renderAnimals(); draw();
+}
+
+function pip(x,y,poly){
+  let inside=false;
+  for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+    const xi=poly[i].x,yi=poly[i].y,xj=poly[j].x,yj=poly[j].y;
+    if(((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi)) inside=!inside;
+  }
+  return inside;
+}
+
+// ═══════════════════════════════════════
+// TRAZADO GPS / MANUAL
+// ═══════════════════════════════════════
+let isTracing=false, lastGpsVp=null;
+const MIN_M=3;
+
+function toggleTrace(){
+  isTracing ? stopTrace() : startTrace();
+}
+
+function startTrace(){
+  isTracing=true; S.terrain=[]; lastGpsVp=null;
+  S.editMode=false;
+  document.getElementById('btnEdit').style.display='none';
+  document.getElementById('btnT').className='bmain bstop';
+  document.getElementById('btnT').innerHTML='⏹ FINALIZAR TERRENO';
+  document.getElementById('gps').style.display='block';
+  document.getElementById('mpill').innerHTML='<div class="dr"></div>TRAZANDO';
+  updateTraceStats();
+
+  if(location.protocol==='https:'){
+    S.traceMode='gps';
+    document.getElementById('trtitle').textContent='🔴 GPS activo — caminando...';
+    document.getElementById('trsub').textContent='Camina el perímetro, se traza solo';
+    document.getElementById('gacc').textContent='Obteniendo señal...';
+    S.gpsId=navigator.geolocation.watchPosition(onGps,onGpsErr,{enableHighAccuracy:true,maximumAge:0,timeout:10000});
+  } else {
+    S.traceMode='manual';
+    document.getElementById('trtitle').textContent='✏️ Modo manual';
+    document.getElementById('trsub').textContent='Toca el mapa · 4+ puntos · toca ✓ para cerrar';
+    document.getElementById('gacc').innerHTML='📵 local · <span>toca el mapa para trazar</span>';
+  }
+}
+
+function onGps(pos){
+  const lat=pos.coords.latitude, lon=pos.coords.longitude, acc=Math.round(pos.coords.accuracy);
+  document.getElementById('gacc').innerHTML=`<span>${lat.toFixed(5)}°N ${lon.toFixed(5)}°O</span> ±${acc}m`;
+  if(!S.myLat){ S.centerLat=lat; S.centerLon=lon; S.ox=0; S.oy=0; }
+  S.myLat=lat; S.myLon=lon;
+  if(!isTracing||S.traceMode!=='gps') return;
+  const vp=g2v(lat,lon);
+  if(lastGpsVp){
+    const d=Math.hypot(vp.x-lastGpsVp.x,vp.y-lastGpsVp.y)*S.MPU;
+    if(d<MIN_M) return;
+  }
+  lastGpsVp=vp; S.terrain.push(vp);
+  updateTraceStats(); draw();
+}
+
+function onGpsErr(e){
+  S.traceMode='manual';
+  document.getElementById('trtitle').textContent='✏️ Manual (GPS falló)';
+  document.getElementById('trsub').textContent='Toca el mapa para poner puntos';
+  document.getElementById('gacc').innerHTML='⚠ GPS no disponible · <span>toca el mapa</span>';
+}
+
+function stopTrace(){
+  isTracing=false; S.traceMode='idle';
+  if(S.gpsId!==null){ navigator.geolocation.clearWatch(S.gpsId); S.gpsId=null; }
+  document.getElementById('btnT').className='bmain bstart';
+  document.getElementById('btnT').innerHTML='📍 INICIAR TRAZADO';
+  document.getElementById('gps').style.display='none';
+  document.getElementById('mpill').innerHTML='<div class="dl"></div>RASTREO';
+  if(S.terrain.length>=4){
+    document.getElementById('trtitle').textContent='✅ Terreno guardado';
+    document.getElementById('trsub').textContent=`${S.terrain.length} puntos · toca "Editar" para mover puntos`;
+    document.getElementById('btnEdit').style.display='flex';
+  } else if(S.terrain.length>0){
+    document.getElementById('trtitle').textContent='⚠ Pocos puntos';
+    document.getElementById('trsub').textContent='Se necesitan al menos 4 puntos';
+  } else {
+    document.getElementById('trtitle').textContent='Listo para trazar';
+    document.getElementById('trsub').textContent='Presiona INICIAR o usa Demo para probar';
+  }
+  updateTraceStats(); draw();
+}
+
+// Agregar punto manual al tocar el canvas
+function addManualPt(cx,cy){
+  if(!isTracing||S.traceMode!=='manual') return;
+  const vp=c2v(cx,cy);
+  // ¿Toca el primer punto para cerrar? (mínimo 4 puntos)
+  if(S.terrain.length>=4){
+    const first=v2c(S.terrain[0].x,S.terrain[0].y);
+    if(Math.hypot(cx-first.x,cy-first.y)<26){ stopTrace(); return; }
+  }
+  S.terrain.push(vp);
+  updateTraceStats();
+  if(S.terrain.length>=4)
+    document.getElementById('trsub').textContent=`${S.terrain.length} puntos — toca el punto ✓ para cerrar`;
+  draw();
+}
+
+function updateTraceStats(){
+  const n=S.terrain.length;
+  document.getElementById('sPts').textContent=n;
+  if(n<2){ document.getElementById('sDist').textContent='0m'; document.getElementById('sArea').textContent='—'; return; }
+  let d=0;
+  for(let i=1;i<n;i++) d+=Math.hypot(S.terrain[i].x-S.terrain[i-1].x,S.terrain[i].y-S.terrain[i-1].y)*S.MPU;
+  document.getElementById('sDist').textContent=d>1000?(d/1000).toFixed(2)+'km':Math.round(d)+'m';
+  if(n>=3){
+    let area=0;
+    for(let i=0;i<n;i++){ const j=(i+1)%n; area+=S.terrain[i].x*S.terrain[j].y-S.terrain[j].x*S.terrain[i].y; }
+    const m2=Math.abs(area/2)*S.MPU*S.MPU;
+    document.getElementById('sArea').textContent=m2>10000?(m2/10000).toFixed(2)+'ha':Math.round(m2)+'m²';
+  }
+}
+
+// ═══════════════════════════════════════
+// EDICIÓN DE PUNTOS
+// ═══════════════════════════════════════
+function toggleEdit(){
+  S.editMode=!S.editMode;
+  const btn=document.getElementById('btnEdit');
+  const hint=document.getElementById('editHint');
+  if(S.editMode){
+    btn.textContent='✅ Guardar edición';
+    btn.style.background='rgba(212,160,23,0.15)';
+    btn.style.borderColor='var(--oro)';
+    btn.style.color='var(--oro)';
+    hint.style.display='block';
+  } else {
+    btn.textContent='✏️ Editar puntos';
+    btn.style.background=''; btn.style.borderColor=''; btn.style.color='';
+    hint.style.display='none';
+  }
+  draw();
+}
+
+// Encontrar punto más cercano al toque (en modo edición)
+function nearestPt(cx,cy){
+  let best=-1, bestD=Infinity;
+  S.terrain.forEach((p,i)=>{
+    const c=v2c(p.x,p.y);
+    const d=Math.hypot(cx-c.x,cy-c.y);
+    if(d<bestD){ bestD=d; best=i; }
+  });
+  return bestD<28 ? best : -1;
+}
+
+// ═══════════════════════════════════════
+// DEMO
+// ═══════════════════════════════════════
+function loadDemo(){
+  stopTrace();
+  S.editMode=false;
+  document.getElementById('editHint').style.display='none';
+  S.terrain=[{x:-85,y:-75},{x:80,y:-80},{x:90,y:70},{x:-80,y:75}];
+  document.getElementById('trtitle').textContent='🌾 Terreno demo (rectangular)';
+  document.getElementById('trsub').textContent='4 puntos · toca "Editar" para mover puntos';
+  document.getElementById('btnEdit').style.display='flex';
+  updateTraceStats(); draw();
+}
+
+// ═══════════════════════════════════════
+// ALERTAS
+// ═══════════════════════════════════════
+function trigAlert(a){
+  document.getElementById('apbody').textContent=`${a.name} (${a.breed}) salió del perímetro.`;
+  document.getElementById('apop').style.display='block';
+  setTimeout(()=>{ document.getElementById('apop').style.display='none'; },5000);
+  addAlEntry(`⚠ ${a.name} salió del terreno`,true);
+  document.getElementById('opill').style.display='flex';
+  if(navigator.vibrate) navigator.vibrate([200,80,200]);
+}
+
+function closeAlert(){ document.getElementById('apop').style.display='none'; }
+
+function addAlEntry(txt,warn){
+  const el=document.getElementById('allist');
+  const emp=el.querySelector('.empty'); if(emp) emp.remove();
+  const t=new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const d=document.createElement('div');
+  d.className=`alrow ${warn?'w':'ok'}`;
+  d.innerHTML=`<div class="alt ${warn?'w':'ok'}">${txt}</div><div class="altime">${t}</div>`;
+  el.insertBefore(d,el.firstChild);
+  if(el.children.length>10) el.removeChild(el.lastChild);
+}
+
+function updateStats(){
+  const out=S.animals.filter(a=>!a.inside).length;
+  document.getElementById('ocnt').textContent=out;
+  if(out>0) document.getElementById('opill').style.display='flex';
+}
+
+function renderAnimals(){
+  const el=document.getElementById('alist'); el.innerHTML='';
+  S.animals.forEach(a=>{
+    const g=v2geo(a.x,a.y);
+    const d=document.createElement('div');
+    d.className=`arow${!a.inside?' out':''}`;
+    d.innerHTML=`<div class="adot${!a.inside?' out':''}" style="background:${!a.inside?'#FF4D1C':a.color}"></div>
+      <div class="ainfo"><div class="aname">${a.name} <span style="font-size:0.6rem;font-weight:400;color:var(--dim)">${a.breed}</span></div>
+      <div class="acoord${!a.inside?' out':''}">${!a.inside?'⚠ FUERA DEL TERRENO':`${g.lat.toFixed(4)}°N, ${g.lon.toFixed(4)}°O`}</div></div>
+      <div class="aclr" style="background:${a.color}"></div>`;
+    el.appendChild(d);
+  });
+}
+
+// ═══════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════
+function goTab(t){
+  ['trace','track','alerts'].forEach(x=>{
+    document.getElementById('t'+x.charAt(0).toUpperCase()+x.slice(1)||'tAlt').classList.toggle('on',x===t);
+    document.getElementById('c'+x.charAt(0).toUpperCase()+x.slice(1)).classList.toggle('on',x===t);
+  });
+}
+// fix tab ids
+document.getElementById('tTrace').onclick=()=>goTab('trace');
+document.getElementById('tTrack').onclick=()=>goTab('track');
+document.getElementById('tAlt').onclick=()=>goTab('alerts');
+function goTab(t){
+  [['trace','cTrace','tTrace'],['track','cTrack','tTrack'],['alerts','cAlt','tAlt']].forEach(([k,cid,tid])=>{
+    document.getElementById(cid).classList.toggle('on',k===t);
+    document.getElementById(tid).classList.toggle('on',k===t);
+  });
+}
+
+// ═══════════════════════════════════════
+// MAPA — controles
+// ═══════════════════════════════════════
+function doZoom(f){ S.zoom=Math.max(0.3,Math.min(6,S.zoom*f)); draw(); }
+function centerMe(){ S.ox=0; S.oy=0; draw(); }
+function clearAll(){
+  stopTrace(); S.terrain=[];
+  S.editMode=false;
+  document.getElementById('editHint').style.display='none';
+  document.getElementById('btnEdit').style.display='none';
+  document.getElementById('trtitle').textContent='Listo para trazar';
+  document.getElementById('trsub').textContent='Presiona INICIAR o usa Demo para probar';
+  document.getElementById('sPts').textContent='0';
+  document.getElementById('sDist').textContent='0m';
+  document.getElementById('sArea').textContent='—';
+  document.getElementById('allist').innerHTML='<div class="empty">Sin alertas recientes</div>';
+  document.getElementById('opill').style.display='none';
+  draw();
+}
+
+// ═══════════════════════════════════════
+// EVENTOS CANVAS — touch + mouse
+// ═══════════════════════════════════════
+let mapDrag=false, mapDragLast=null, mapMoved=0;
+let pinching=false, pinchDist0=0;
+let editDragIdx=-1;
+
+function ptDist(t){ return Math.hypot(t[1].clientX-t[0].clientX,t[1].clientY-t[0].clientY); }
+function getXY(e){ return e.touches ? {x:e.touches[0].clientX,y:e.touches[0].clientY} : {x:e.clientX,y:e.clientY}; }
+
+// ── TOUCH ──
+cv.addEventListener('touchstart',e=>{
+  e.preventDefault();
+  if(e.touches.length===2){
+    pinching=true; mapDrag=false;
+    pinchDist0=ptDist(e.touches);
+    return;
+  }
+  const {x,y}=getXY(e);
+  // Modo edición: buscar punto cercano
+  if(S.editMode && S.terrain.length>0){
+    editDragIdx=nearestPt(x,y);
+    if(editDragIdx>=0) return; // encontró punto, no hace drag de mapa
+  }
+  mapDrag=true; mapMoved=0; mapDragLast={x,y};
+},{passive:false});
+
+cv.addEventListener('touchmove',e=>{
+  e.preventDefault();
+  if(pinching&&e.touches.length===2){
+    const d=ptDist(e.touches);
+    S.zoom=Math.max(0.3,Math.min(6,S.zoom*(d/pinchDist0)));
+    pinchDist0=d; draw(); return;
+  }
+  const {x,y}=getXY(e);
+  if(S.editMode&&editDragIdx>=0){
+    S.terrain[editDragIdx]=c2v(x,y);
+    updateTraceStats(); draw(); return;
+  }
+  if(mapDrag&&mapDragLast){
+    mapMoved+=Math.abs(x-mapDragLast.x)+Math.abs(y-mapDragLast.y);
+    S.ox+=x-mapDragLast.x; S.oy+=y-mapDragLast.y;
+    mapDragLast={x,y}; draw();
+  }
+},{passive:false});
+
+cv.addEventListener('touchend',e=>{
+  const wasPinch=pinching; pinching=false;
+  const wasDrag=mapDrag; mapDrag=false;
+  const wasEdit=editDragIdx>=0; editDragIdx=-1;
+  if(!wasPinch&&!wasEdit&&mapMoved<10&&e.changedTouches.length>0){
+    addManualPt(e.changedTouches[0].clientX,e.changedTouches[0].clientY);
+  }
+});
+
+// ── MOUSE ──
+cv.addEventListener('mousedown',e=>{
+  if(S.editMode&&S.terrain.length>0){
+    editDragIdx=nearestPt(e.clientX,e.clientY);
+    if(editDragIdx>=0) return;
+  }
+  mapDrag=true; mapMoved=0; mapDragLast={x:e.clientX,y:e.clientY};
+});
+cv.addEventListener('mousemove',e=>{
+  if(S.editMode&&editDragIdx>=0){
+    S.terrain[editDragIdx]=c2v(e.clientX,e.clientY);
+    updateTraceStats(); draw(); return;
+  }
+  if(!mapDrag) return;
+  mapMoved+=Math.abs(e.clientX-mapDragLast.x)+Math.abs(e.clientY-mapDragLast.y);
+  S.ox+=e.clientX-mapDragLast.x; S.oy+=e.clientY-mapDragLast.y;
+  mapDragLast={x:e.clientX,y:e.clientY}; draw();
+});
+cv.addEventListener('mouseup',e=>{
+  const wasEdit=editDragIdx>=0; editDragIdx=-1;
+  if(mapDrag&&mapMoved<5&&!wasEdit) addManualPt(e.clientX,e.clientY);
+  mapDrag=false;
+});
+cv.addEventListener('wheel',e=>{ e.preventDefault(); doZoom(e.deltaY<0?1.1:0.9); },{passive:false});
+
+// ═══════════════════════════════════════
+// PANEL DESLIZABLE
+// ═══════════════════════════════════════
+const bp   = document.getElementById('bp');
+const hdl  = document.getElementById('hdl');
+let panelOpen = true;
+let pDragY=null, pStartT=0, pCurT=0, pLastY=0, pLastTime=0;
+
+function setPanelY(y,anim){
+  bp.style.transition=anim?'transform 0.28s cubic-bezier(0.4,0,0.2,1)':'none';
+  bp.style.transform=`translateY(${Math.round(y)}px)`;
+  pCurT=y;
+}
+
+function peekH(){
+  // Altura del handle + tabs solamente (~72px)
+  return bp.offsetHeight - 72;
+}
+
+function snapPanel(vel){
+  if(vel>220 || pCurT > peekH()*0.4){
+    panelOpen=false; setPanelY(peekH(),true);
+  } else {
+    panelOpen=true; setPanelY(0,true);
+  }
+}
+
+// Touch en handle
+hdl.addEventListener('touchstart',e=>{
+  pDragY=e.touches[0].clientY;
+  pStartT=pCurT; pLastY=pDragY; pLastTime=Date.now();
+  bp.style.transition='none';
+},{passive:true});
+
+hdl.addEventListener('touchmove',e=>{
+  const dy=e.touches[0].clientY-pDragY;
+  const max=peekH();
+  setPanelY(Math.max(0,Math.min(max,pStartT+dy)),false);
+  pLastY=e.touches[0].clientY; pLastTime=Date.now();
+},{passive:true});
+
+hdl.addEventListener('touchend',e=>{
+  const dt=Math.max(1,Date.now()-pLastTime);
+  const vel=(e.changedTouches[0].clientY-pLastY)/dt*1000;
+  snapPanel(vel);
+});
+
+// Tap en handle → toggle
+hdl.addEventListener('click',()=>{
+  if(!panelOpen){ panelOpen=true; setPanelY(0,true); }
+  else { panelOpen=false; setPanelY(peekH(),true); }
+});
+
+// Mouse en handle
+hdl.addEventListener('mousedown',e=>{
+  pDragY=e.clientY; pStartT=pCurT; pLastY=e.clientY; pLastTime=Date.now();
+  bp.style.transition='none';
+  const mv=ev=>{
+    const dy=ev.clientY-pDragY;
+    setPanelY(Math.max(0,Math.min(peekH(),pStartT+dy)),false);
+    pLastY=ev.clientY; pLastTime=Date.now();
+  };
+  const up=ev=>{
+    const dt=Math.max(1,Date.now()-pLastTime);
+    const vel=(ev.clientY-pLastY)/dt*1000;
+    snapPanel(vel);
+    window.removeEventListener('mousemove',mv);
+    window.removeEventListener('mouseup',up);
+  };
+  window.addEventListener('mousemove',mv);
+  window.addEventListener('mouseup',up);
+});
+
+// ═══════════════════════════════════════
+// INICIO
+// ═══════════════════════════════════════
+resize();
+initAnimals();
+loadDemo();
+
+if('geolocation'in navigator){
+  navigator.geolocation.getCurrentPosition(p=>{
+    S.myLat=p.coords.latitude; S.myLon=p.coords.longitude; draw();
+  },()=>{},{enableHighAccuracy:true});
+}
+
+setInterval(tickAnimals,800);
+</script>
+</body>
+</html>
